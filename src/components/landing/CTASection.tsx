@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const CTASection = () => {
@@ -12,7 +13,7 @@ const CTASection = () => {
             We're fine‑tuning the Polymath for the March 9th deadline. Get early access to the code and be the first to see it in action.
           </p>
           <Button variant="hero" size="lg" asChild>
-            <a href="#">Join the waitlist</a>
+            <Link to="/dashboard">Try the Dashboard</Link>
           </Button>
         </div>
       </div>
