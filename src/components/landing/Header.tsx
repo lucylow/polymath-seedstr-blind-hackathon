@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const Header = () => {
   return (
     <header className="fixed top-0 w-full bg-background/90 backdrop-blur-md border-b border-border z-50">
@@ -15,12 +17,12 @@ const Header = () => {
               {label}
             </a>
           ))}
-          <a
-            href="#cta"
+          <Link
+            to="/dashboard"
             className="text-primary font-medium hover:text-primary/80 transition-colors"
           >
-            Join waitlist
-          </a>
+            Try Dashboard
+          </Link>
         </nav>
       </div>
     </header>
