@@ -11,17 +11,20 @@ const reasons = [
 
 const WhyWeWinSection = () => {
   return (
-    <section id="why-win" className="py-20">
+    <section id="why-win" className="py-24">
       <div className="container">
-        <h2 className="text-center text-3xl md:text-[2.5rem] font-bold mb-12">
+        <h2 className="text-center text-3xl md:text-[2.5rem] font-bold mb-4">
           Why we <span className="gradient-text">win</span>
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+        <p className="text-center text-muted-foreground mb-14 max-w-lg mx-auto">Built to score high on every judging criterion — functionality, design, and speed.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {reasons.map((r) => (
-            <div key={r.title} className="glass-card rounded-2xl p-6">
-              <r.icon className="text-primary mb-4" size={32} />
-              <h4 className="text-lg font-bold mb-2 text-foreground">{r.title}</h4>
-              <p className="text-muted-foreground text-sm">{r.desc}</p>
+            <div key={r.title} className="glass-card rounded-2xl p-6 group">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                <r.icon className="text-primary" size={24} />
+              </div>
+              <h4 className="text-base font-bold mb-2 text-foreground">{r.title}</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">{r.desc}</p>
             </div>
           ))}
         </div>
