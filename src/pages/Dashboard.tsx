@@ -40,28 +40,30 @@ const runAgentWorkflow = async (
   set("supervisor", "done", "Ready"); onLog("Supervisor ready");
 
   set("analyst", "running", "Analyzing prompt…"); await sleep(1500);
+  onLog("Analyst plan: dashboard with city search, current weather, 5-day forecast, OpenWeatherMap API");
   set("analyst", "done", "Plan created"); onLog("Analyst created technical plan");
 
-  set("developer", "running", "Writing code…");
-  set("designer", "running", "Creating styles…");
+  set("developer", "running", "Writing HTML & JavaScript…");
+  set("designer", "running", "Creating CSS styles…");
+  onLog("Developer and Designer running in parallel…");
   await sleep(2000);
 
   const code = {
-    html: `<div class="app"><h1>${prompt}</h1><p>Generated dashboard content</p><div class="cards"><div class="card">Feature 1</div><div class="card">Feature 2</div><div class="card">Feature 3</div></div></div>`,
-    js: `document.querySelectorAll('.card').forEach(c => c.addEventListener('click', () => c.style.transform = 'scale(1.05)'))`,
+    html: `<div class="weather-dashboard"><header><h1>Weather Dashboard</h1><div class="search"><input id="cityInput" type="text" placeholder="Enter city..." aria-label="City name"><button id="searchBtn">Search</button></div></header><section class="current-weather"><h2>Current Weather</h2><div id="current"><p class="placeholder">Search for a city to see current conditions</p></div></section><section><h2>5-Day Forecast</h2><div id="forecast" class="forecast"><p class="placeholder">Forecast will appear here</p></div></section><footer>Data from OpenWeatherMap</footer></div>`,
+    js: `const apiKey='demo';const mockCurrent={main:{temp:22,humidity:65},weather:[{description:'partly cloudy',icon:'02d'}],wind:{speed:3.5}};const mockForecast={list:[{dt:Date.now()/1000,main:{temp:22},weather:[{icon:'02d'}]},{dt:Date.now()/1000+86400,main:{temp:19},weather:[{icon:'10d'}]},{dt:Date.now()/1000+172800,main:{temp:24},weather:[{icon:'01d'}]},{dt:Date.now()/1000+259200,main:{temp:18},weather:[{icon:'09d'}]},{dt:Date.now()/1000+345600,main:{temp:21},weather:[{icon:'03d'}]}]};document.getElementById('searchBtn').addEventListener('click',()=>{const city=document.getElementById('cityInput').value;if(!city)return;displayCurrent(mockCurrent,city);displayForecast(mockForecast)});function displayCurrent(data,city){document.getElementById('current').innerHTML='<div class="card"><img src="https://openweathermap.org/img/wn/'+data.weather[0].icon+'@2x.png" alt="'+data.weather[0].description+'"><div><h3>'+city+'</h3><p class="temp">'+data.main.temp+'°C</p><p>'+data.weather[0].description+'</p><p>Humidity: '+data.main.humidity+'%</p><p>Wind: '+data.wind.speed+' m/s</p></div></div>'}function displayForecast(data){let html='';data.list.forEach(day=>{const date=new Date(day.dt*1000).toLocaleDateString('en',{weekday:'short'});html+='<div class="forecast-card"><p>'+date+'</p><img src="https://openweathermap.org/img/wn/'+day.weather[0].icon+'.png" alt="weather icon"><p>'+day.main.temp+'°C</p></div>'});document.getElementById('forecast').innerHTML=html}`,
   };
   const styles = {
-    css: `*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;color:#1e293b;display:flex;justify-content:center;padding:2rem}.app{max-width:700px;width:100%}h1{font-size:2rem;margin-bottom:.5rem;color:#3b82f6}p{color:#64748b;margin-bottom:1.5rem}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s}.card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1)}`,
+    css: `*{margin:0;padding:0;box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:1rem}.weather-dashboard{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border-radius:24px;padding:2rem;width:90%;max-width:800px;box-shadow:0 20px 40px rgba(0,0,0,.3)}header{text-align:center;margin-bottom:2rem}h1{font-size:2.2rem;margin-bottom:1rem}h2{font-size:1.3rem;margin-bottom:1rem;opacity:.9}.search{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap}input{padding:.8rem 1.2rem;border:none;border-radius:40px;width:250px;font-size:1rem;background:rgba(255,255,255,.2);color:#fff}input::placeholder{color:rgba(255,255,255,.6)}button{padding:.8rem 2rem;border:none;border-radius:40px;background:#ffb347;color:#1e3c72;font-weight:700;cursor:pointer;transition:transform .2s,background .2s}button:hover{background:#ffa01c;transform:scale(1.05)}.current-weather,.forecast{margin:1.5rem 0}.current-weather .card{display:flex;align-items:center;gap:1.5rem;background:rgba(0,0,0,.2);border-radius:20px;padding:1.5rem;justify-content:center}.card img{width:80px;height:80px}.card h3{font-size:1.4rem;margin-bottom:.3rem}.temp{font-size:2rem;font-weight:700}.forecast{display:flex;flex-wrap:wrap;gap:1rem;justify-content:center}.forecast-card{background:rgba(0,0,0,.2);border-radius:16px;padding:1rem 1.5rem;text-align:center;min-width:90px;transition:transform .2s}.forecast-card:hover{transform:translateY(-4px)}.forecast-card img{width:50px;height:50px}.placeholder{text-align:center;opacity:.6;padding:2rem}footer{text-align:center;margin-top:2rem;color:rgba(255,255,255,.5);font-size:.85rem}@media(max-width:600px){.current-weather .card{flex-direction:column}}`,
   };
 
-  set("developer", "done", "Code ready"); onLog("Developer finished writing code");
-  set("designer", "done", "Styles ready"); onLog("Designer finished creating styles");
+  set("developer", "done", "Code ready"); onLog("Developer finished — HTML + JS with mock weather data");
+  set("designer", "done", "Styles ready"); onLog("Designer finished — glassmorphism + responsive layout");
 
-  set("optimizer", "running", "Optimizing…"); await sleep(1200);
-  set("optimizer", "done", "Optimization complete"); onLog("Optimizer finished – minified and improved");
+  set("optimizer", "running", "Minifying & optimizing…"); await sleep(1200);
+  set("optimizer", "done", "Optimization complete"); onLog("Optimizer finished – minified CSS/JS, improved performance");
 
-  set("supervisor", "running", "Packaging…"); await sleep(500);
-  set("supervisor", "done", "Submission ready"); onLog("✅ All done! Output ready for download.");
+  set("supervisor", "running", "Packaging final output…"); await sleep(500);
+  set("supervisor", "done", "Submission ready"); onLog("✅ All done! Weather Dashboard ready for download.");
 
   onResult({ code, styles, optimized: { html: code.html, css: styles.css, js: code.js } });
 };
