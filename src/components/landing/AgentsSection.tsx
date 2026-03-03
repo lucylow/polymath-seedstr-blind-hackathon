@@ -19,12 +19,17 @@ const AgentsSection = () => {
           {agents.map((agent) => (
             <div
               key={agent.title}
-              className="glass-card rounded-3xl p-6 transition-all duration-300 hover:-translate-y-2 hover:border-primary"
+              className="glass-card rounded-3xl p-6 group"
             >
-              <div className="w-[70px] h-[70px] rounded-2xl flex items-center justify-center mb-5 text-secondary-foreground text-2xl" style={{ background: "var(--gradient-primary)" }}>
-                <agent.icon size={28} />
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-secondary-foreground shrink-0 transition-transform duration-300 group-hover:scale-110"
+                  style={{ background: "var(--gradient-primary)" }}
+                >
+                  <agent.icon size={22} />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">{agent.title}</h3>
               </div>
-              <h3 className="text-xl font-bold mb-2 text-foreground">{agent.title}</h3>
               <p className="text-muted-foreground text-sm">{agent.desc}</p>
             </div>
           ))}
