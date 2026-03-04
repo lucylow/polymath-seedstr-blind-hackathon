@@ -1,0 +1,4 @@
+project_id = "cacnmorgevlayoibxaod"
+
+[functions.polymath-agents]
+verify_jwt = false
