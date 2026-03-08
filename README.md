@@ -2,7 +2,7 @@
 # Full‑Stack Polymath
 
 **Build anything from a mystery prompt with a multi‑agent AI system.**  
-Winner‑caliber architecture for the [Seedstr Blind Hackathon](https://seedstr.io/hackathon).
+[Seedstr Blind Hackathon](https://seedstr.io/hackathon).
 
 ---
 
