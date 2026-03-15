@@ -320,8 +320,8 @@ serve(async (req) => {
           log("Developer and Designer running in parallel…", "system");
 
           const [codeRaw, stylesRaw] = await Promise.all([
-            callLLM(LOVABLE_API_KEY, DEVELOPER_SYSTEM, `Implement this project plan:\n${JSON.stringify(plan, null, 2)}\n\nReturn only valid JSON.`, { json: true }),
-            callLLM(LOVABLE_API_KEY, DESIGNER_SYSTEM, `Create styles for this project plan:\n${JSON.stringify(plan, null, 2)}\n\nReturn only valid JSON.`, { json: true, temp: 0.3 }),
+            callLLM(LOVABLE_API_KEY, DEVELOPER_SYSTEM, `Implement this project plan:\n${JSON.stringify(plan, null, 2)}\n\nReturn only valid JSON.`, { json: true, model: "google/gemini-2.5-pro" }),
+            callLLM(LOVABLE_API_KEY, DESIGNER_SYSTEM, `Create styles for this project plan:\n${JSON.stringify(plan, null, 2)}\n\nReturn only valid JSON.`, { json: true, temp: 0.3, model: "openai/gpt-5-mini" }),
           ]);
 
           let code: { html: string; js: string; notes?: string };
