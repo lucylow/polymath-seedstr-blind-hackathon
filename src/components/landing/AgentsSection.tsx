@@ -1,11 +1,12 @@
-import { Brain, BarChart3, Code2, Palette, Zap } from "lucide-react";
+import { Brain, BarChart3, Code2, Palette, Shield, Zap } from "lucide-react";
 
 const agents = [
   { icon: Brain, title: "Supervisor", desc: "Orchestrates the workflow: receives the mystery prompt, delegates tasks, and synthesizes the final output. The brain of the operation." },
-  { icon: BarChart3, title: "Analyst", desc: "Deconstructs the prompt into a detailed technical plan: project type, features, tech stack, file structure, and data requirements." },
-  { icon: Code2, title: "Developer", desc: "Writes clean, functional HTML and JavaScript that implements the plan. Self-contained, efficient, and ready to run." },
-  { icon: Palette, title: "Designer", desc: "Generates beautiful, responsive CSS with micro‑interactions, accessibility, and a perfect color palette aligned with the prompt." },
-  { icon: Zap, title: "Optimizer", desc: "Measures performance, minifies code, and refines the output to ensure lightning‑fast load times and smooth interactions." },
+  { icon: BarChart3, title: "Analyst", desc: "Deconstructs the prompt into a detailed technical plan with features, layout, color scheme, and accessibility requirements. Supports human review." },
+  { icon: Code2, title: "Developer", desc: "Writes clean, self-contained HTML and JavaScript with realistic mock data, keyboard navigation, and proper error handling." },
+  { icon: Palette, title: "Designer", desc: "Creates responsive CSS with design system tokens, WCAG 2.1 AA compliance, dark mode support, and fluid typography." },
+  { icon: Shield, title: "Security Auditor", desc: "Scans generated code for XSS vulnerabilities, accessibility violations, and code quality issues. Automatically fixes critical problems." },
+  { icon: Zap, title: "Optimizer", desc: "Combines, cleans, and polishes the final output: removes dead code, optimizes selectors, and ensures semantic HTML." },
 ];
 
 const AgentsSection = () => {
