@@ -268,7 +268,7 @@ serve(async (req) => {
               ? `Mystery prompt: ${prompt}\n\nPrevious feedback from human reviewer: ${feedback}\n\nRevise the plan based on this feedback. Output only valid JSON.`
               : `Mystery prompt: ${prompt}\n\nOutput only valid JSON.`;
 
-            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, analysisPrompt, { json: true, temp: 0.1 });
+            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, analysisPrompt, { json: true, temp: 0.1, model: "openai/gpt-5" });
 
             let plan: Record<string, unknown>;
             try { plan = JSON.parse(planRaw); } catch {
