@@ -43,14 +43,20 @@ async function callLLM(
   apiKey: string,
   system: string,
   user: string,
-  opts: { json?: boolean; temp?: number; retries?: number } = {},
+  opts: { json?: boolean; temp?: number; retries?: number; model?: string } = {},
 ): Promise<string> {
-  const { json: jsonMode = false, temp = 0.2, retries = 3 } = opts;
+  const { json: jsonMode = false, temp = 0.2, retries = 3, model = "google/gemini-3-flash-preview" } = opts;
 
   if (!inputSafe(user)) throw new Error("Prompt rejected by input guardrail");
 
   const body: Record<string, unknown> = {
-    model: "google/gemini-3-flash-preview",
+    model,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    temperature: temp,
+  };
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },
