@@ -43,14 +43,20 @@ async function callLLM(
   apiKey: string,
   system: string,
   user: string,
-  opts: { json?: boolean; temp?: number; retries?: number } = {},
+  opts: { json?: boolean; temp?: number; retries?: number; model?: string } = {},
 ): Promise<string> {
-  const { json: jsonMode = false, temp = 0.2, retries = 3 } = opts;
+  const { json: jsonMode = false, temp = 0.2, retries = 3, model = "google/gemini-3-flash-preview" } = opts;
 
   if (!inputSafe(user)) throw new Error("Prompt rejected by input guardrail");
 
   const body: Record<string, unknown> = {
-    model: "google/gemini-3-flash-preview",
+    model,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    temperature: temp,
+  };
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -262,7 +268,7 @@ serve(async (req) => {
               ? `Mystery prompt: ${prompt}\n\nPrevious feedback from human reviewer: ${feedback}\n\nRevise the plan based on this feedback. Output only valid JSON.`
               : `Mystery prompt: ${prompt}\n\nOutput only valid JSON.`;
 
-            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, analysisPrompt, { json: true, temp: 0.1 });
+            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, analysisPrompt, { json: true, temp: 0.1, model: "openai/gpt-5" });
 
             let plan: Record<string, unknown>;
             try { plan = JSON.parse(planRaw); } catch {
@@ -296,7 +302,7 @@ serve(async (req) => {
             log("Using human-approved plan", "analyst");
           } else {
             agent("analyst", "running", "Analyzing prompt…", 10, "Breaking down requirements…");
-            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, `Mystery prompt: ${prompt}\n\nOutput only valid JSON.`, { json: true, temp: 0.1 });
+            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, `Mystery prompt: ${prompt}\n\nOutput only valid JSON.`, { json: true, temp: 0.1, model: "openai/gpt-5" });
             try { plan = JSON.parse(planRaw); } catch {
               plan = { project_type: "web app", features: ["basic UI"], tech_stack: ["HTML", "CSS", "JS"], file_structure: ["index.html"], data_requirements: "none", special_notes: "" };
             }
@@ -314,8 +320,8 @@ serve(async (req) => {
           log("Developer and Designer running in parallel…", "system");
 
           const [codeRaw, stylesRaw] = await Promise.all([
-            callLLM(LOVABLE_API_KEY, DEVELOPER_SYSTEM, `Implement this project plan:\n${JSON.stringify(plan, null, 2)}\n\nReturn only valid JSON.`, { json: true }),
-            callLLM(LOVABLE_API_KEY, DESIGNER_SYSTEM, `Create styles for this project plan:\n${JSON.stringify(plan, null, 2)}\n\nReturn only valid JSON.`, { json: true, temp: 0.3 }),
+            callLLM(LOVABLE_API_KEY, DEVELOPER_SYSTEM, `Implement this project plan:\n${JSON.stringify(plan, null, 2)}\n\nReturn only valid JSON.`, { json: true, model: "google/gemini-2.5-pro" }),
+            callLLM(LOVABLE_API_KEY, DESIGNER_SYSTEM, `Create styles for this project plan:\n${JSON.stringify(plan, null, 2)}\n\nReturn only valid JSON.`, { json: true, temp: 0.3, model: "openai/gpt-5-mini" }),
           ]);
 
           let code: { html: string; js: string; notes?: string };
@@ -351,7 +357,7 @@ serve(async (req) => {
             LOVABLE_API_KEY,
             SECURITY_AUDITOR_SYSTEM,
             `Audit this code:\n\nHTML:\n${code.html}\n\nCSS:\n${styles.css}\n\nJS:\n${code.js}\n\nReturn only valid JSON.`,
-            { json: true, temp: 0.1 },
+            { json: true, temp: 0.1, model: "google/gemini-2.5-flash" },
           );
 
           let audit: {
@@ -387,7 +393,7 @@ serve(async (req) => {
             LOVABLE_API_KEY,
             OPTIMIZER_SYSTEM,
             `Optimize and combine this audited code:\n\nHTML:\n${code.html}\n\nCSS:\n${styles.css}\n\nJS:\n${code.js}\n\nReturn only valid JSON.`,
-            { json: true, temp: 0.1 },
+            { json: true, temp: 0.1, model: "openai/gpt-5-mini" },
           );
 
           let optimized: { html: string; css: string; js: string; improvements?: string[] };
