@@ -302,7 +302,7 @@ serve(async (req) => {
             log("Using human-approved plan", "analyst");
           } else {
             agent("analyst", "running", "Analyzing prompt…", 10, "Breaking down requirements…");
-            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, `Mystery prompt: ${prompt}\n\nOutput only valid JSON.`, { json: true, temp: 0.1 });
+            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, `Mystery prompt: ${prompt}\n\nOutput only valid JSON.`, { json: true, temp: 0.1, model: "openai/gpt-5" });
             try { plan = JSON.parse(planRaw); } catch {
               plan = { project_type: "web app", features: ["basic UI"], tech_stack: ["HTML", "CSS", "JS"], file_structure: ["index.html"], data_requirements: "none", special_notes: "" };
             }
