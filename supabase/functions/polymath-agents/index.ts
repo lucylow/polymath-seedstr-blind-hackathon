@@ -357,7 +357,7 @@ serve(async (req) => {
             LOVABLE_API_KEY,
             SECURITY_AUDITOR_SYSTEM,
             `Audit this code:\n\nHTML:\n${code.html}\n\nCSS:\n${styles.css}\n\nJS:\n${code.js}\n\nReturn only valid JSON.`,
-            { json: true, temp: 0.1 },
+            { json: true, temp: 0.1, model: "google/gemini-2.5-flash" },
           );
 
           let audit: {
