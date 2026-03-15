@@ -57,12 +57,7 @@ async function callLLM(
     ],
     temperature: temp,
   };
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-    temperature: temp,
-  };
+
   if (jsonMode) body.response_format = { type: "json_object" };
 
   for (let attempt = 0; attempt < retries; attempt++) {
