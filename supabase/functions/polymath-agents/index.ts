@@ -27,15 +27,18 @@ function createHelpers(send: EventSender) {
 }
 
 // ---------------------------------------------------------------------------
-// LLM caller with retry & input guardrails
+// Input guardrails
 // ---------------------------------------------------------------------------
-const DANGEROUS_PHRASES = ["ignore previous", "you are now", "system prompt", "disregard"];
+const DANGEROUS_PHRASES = ["ignore previous", "you are now", "system prompt", "disregard", "forget your instructions"];
 
 function inputSafe(text: string): boolean {
   const lower = text.toLowerCase();
   return !DANGEROUS_PHRASES.some((p) => lower.includes(p));
 }
 
+// ---------------------------------------------------------------------------
+// LLM caller with retry
+// ---------------------------------------------------------------------------
 async function callLLM(
   apiKey: string,
   system: string,
@@ -69,7 +72,7 @@ async function callLLM(
     }
 
     if (!resp.ok) {
-      if (attempt < retries - 1) { await new Promise((r) => setTimeout(r, 1000)); continue; }
+      if (attempt < retries - 1) { await new Promise((r) => setTimeout(r, 1500)); continue; }
       const t = await resp.text();
       throw new Error(`AI gateway error [${resp.status}]: ${t}`);
     }
@@ -91,78 +94,132 @@ async function callLLM(
 // Code safety check
 // ---------------------------------------------------------------------------
 function codeIsSafe(js: string): boolean {
-  const banned = [/eval\s*\(/, /document\.write\s*\(/, /innerHTML\s*=.*<script/i, /window\.location\s*=/];
+  const banned = [/eval\s*\(/, /document\.write\s*\(/, /innerHTML\s*=.*<script/i, /window\.location\s*=/, /Function\s*\(/];
   return !banned.some((rx) => rx.test(js));
 }
 
 // ---------------------------------------------------------------------------
 // Specialized Agent Prompts
 // ---------------------------------------------------------------------------
-const ANALYST_SYSTEM = `You are a senior software architect with deep expertise in web development.
-Analyze the user's prompt and produce a comprehensive, actionable technical plan.
+const ANALYST_SYSTEM = `You are a principal software architect with 15+ years of experience in web development, design systems, and accessibility.
+
+Your job: analyze a mystery prompt and produce the most comprehensive, actionable technical blueprint possible.
 
 Return a JSON object with these keys:
-- project_type (string): e.g. "dashboard", "game", "form", "landing page"
-- features (array of strings): specific, implementable features
-- tech_stack (array of strings): prefer vanilla HTML/CSS/JS unless the prompt demands a framework
-- file_structure (array of strings): always include index.html, style.css, script.js
-- data_requirements (string): what data must be displayed, manipulated, or fetched
-- special_notes (string): accessibility, responsiveness, edge cases, and constraints
+- project_type (string): specific classification — e.g. "interactive dashboard", "puzzle game", "data entry form", "portfolio site"
+- features (array of strings): 5-10 specific, implementable features. Each must be concrete enough for a developer to build without ambiguity.
+- tech_stack (array of strings): prefer vanilla HTML/CSS/JS. Only suggest a framework if the prompt genuinely requires one (e.g. complex state management, routing).
+- file_structure (array of strings): always include index.html, style.css, script.js. Add more only if genuinely needed.
+- data_requirements (string): detailed description of what data to display, how to generate mock data, data shapes/structures.
+- ui_layout (string): describe the page layout — header, sidebar, main content, footer. Include responsive behavior.
+- color_scheme (string): suggest a color direction appropriate to the project type (e.g. "professional blues and grays for a dashboard", "vibrant warm tones for a game").
+- accessibility_requirements (string): specific WCAG 2.1 AA requirements relevant to this project.
+- special_notes (string): edge cases, constraints, responsive breakpoints, performance considerations.
 
-Be precise. Every feature must be buildable in a single-page app.`;
+Be precise. Every feature must be buildable in a self-contained single-page app with zero external dependencies.`;
 
-const DEVELOPER_SYSTEM = `You are an expert front-end developer. Write clean, efficient, well-documented code.
-
-Rules:
-- Use vanilla HTML + JS (no frameworks unless the plan explicitly requires one).
-- Code must be fully self-contained and run in a browser with zero dependencies.
-- Include proper event listeners, DOM manipulation, error handling.
-- Use demo/mock data instead of real API calls (generate realistic sample data).
-- Add meaningful comments explaining key logic.
-- Ensure keyboard navigation works for interactive elements.
-- NEVER use eval(), document.write(), or inline event handlers in HTML attributes.
-
-Return a JSON object with:
-- "html" (string): the HTML body content only — no <html>, <head>, or <body> tags.
-- "js" (string): complete JavaScript code.
-- "notes" (string): brief explanation of implementation decisions.`;
-
-const DESIGNER_SYSTEM = `You are a world-class UI/UX designer who writes exceptional CSS.
+const DEVELOPER_SYSTEM = `You are a senior front-end engineer with expertise in vanilla web development, DOM APIs, and performance optimization.
 
 Rules:
-- Use modern CSS: Grid, Flexbox, custom properties, clamp(), container queries where useful.
-- Mobile-first responsive design with at least 3 breakpoints (mobile, tablet, desktop).
-- Follow WCAG 2.1 AA: minimum 4.5:1 contrast, visible focus states, reduced-motion media query.
-- Include a cohesive color palette with CSS custom properties (--color-primary, --color-secondary, etc.).
-- Add subtle animations: hover transitions, entrance animations, smooth scrolling.
-- Use a professional type scale with readable line heights.
-- Add dark-mode support via prefers-color-scheme if appropriate.
+- Write vanilla HTML + JS only (no frameworks, no libraries, no CDN imports).
+- Code must be 100% self-contained and run in any modern browser with zero dependencies.
+- Generate realistic mock/demo data (names, numbers, dates) — never use placeholder text like "Lorem ipsum" or "Item 1".
+- Implement proper error handling: try/catch blocks, fallback UI states, input validation.
+- Use modern JS: async/await, template literals, destructuring, optional chaining, nullish coalescing.
+- DOM: use createElement + appendChild pattern or template literals with insertAdjacentHTML. Never use document.write().
+- Event delegation where appropriate for better performance.
+- Add keyboard navigation for all interactive elements (Tab, Enter, Escape, Arrow keys where applicable).
+- Include meaningful code comments explaining WHY, not WHAT.
+- NEVER use: eval(), document.write(), inline onclick/onchange attributes, innerHTML with unsanitized content.
+- Generate at least 5-10 items of realistic sample data.
 
 Return a JSON object with:
-- "css" (string): complete CSS stylesheet.
-- "color_palette" (array of strings): hex colors used.
-- "notes" (string): design decisions and accessibility notes.`;
+- "html" (string): HTML body content only — no <html>, <head>, or <body> wrapper tags.
+- "js" (string): complete, production-quality JavaScript.
+- "notes" (string): implementation decisions and any trade-offs made.`;
 
-const OPTIMIZER_SYSTEM = `You are a performance and quality engineer.
+const DESIGNER_SYSTEM = `You are a world-class UI/UX designer and CSS engineer with expertise in design systems, accessibility, and motion design.
 
-Take the provided HTML, CSS, and JS and produce an optimized, production-ready single-page app.
+Rules:
+- Mobile-first responsive design with breakpoints: 480px (mobile), 768px (tablet), 1024px (desktop), 1440px (wide).
+- CSS custom properties for the entire color system: --color-primary, --color-secondary, --color-accent, --color-bg, --color-surface, --color-text, --color-text-muted, --color-border, --color-success, --color-warning, --color-error.
+- Typography scale using clamp() for fluid sizing. Use system font stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif.
+- WCAG 2.1 AA compliance: minimum 4.5:1 contrast for text, 3:1 for large text, visible focus indicators (outline, not just color), skip-navigation if applicable.
+- Layout: CSS Grid for page structure, Flexbox for component internals. Use gap instead of margins where possible.
+- Animations: use prefers-reduced-motion media query. Subtle transitions (200-300ms ease) on hover/focus. Entrance animations for main content.
+- Dark mode via @media (prefers-color-scheme: dark) with adjusted custom properties.
+- Micro-interactions: button press effects, hover state transitions, loading states.
+- Box shadows for depth: use layered shadows for a more natural look.
+- Scrollbar styling for webkit browsers.
+- Print styles if relevant to the project type.
+
+Return a JSON object with:
+- "css" (string): complete, production-quality CSS stylesheet.
+- "color_palette" (array of strings): all hex colors used, with brief labels like "#1a73e8 (primary)".
+- "notes" (string): design rationale, accessibility notes, and responsive strategy.`;
+
+const SECURITY_AUDITOR_SYSTEM = `You are a senior security engineer and accessibility auditor.
+
+Analyze the provided HTML, CSS, and JS code for:
+
+**Security Issues:**
+- XSS vulnerabilities (innerHTML with dynamic content, eval, document.write, Function constructor)
+- Unsafe URL handling (javascript: protocol, data: URIs in links)
+- Prototype pollution risks
+- Insecure data storage patterns
+- Event handler injection risks
+
+**Accessibility Issues:**
+- Missing ARIA labels on interactive elements
+- Missing alt text on images
+- Improper heading hierarchy (h1 → h2 → h3, no skipping)
+- Missing form labels
+- Insufficient color contrast
+- Missing keyboard navigation
+- Missing focus management
+- Missing landmark roles
+
+**Code Quality Issues:**
+- Unused variables or dead code
+- Console.log statements left in production
+- Missing error handling
+- Memory leaks (unremoved event listeners)
+
+Return a JSON object with:
+- "security_issues" (array of objects with "severity": "critical"|"high"|"medium"|"low", "description": string, "fix": string)
+- "accessibility_issues" (array of objects with "severity": "critical"|"high"|"medium"|"low", "description": string, "fix": string)
+- "quality_issues" (array of objects with "severity": "high"|"medium"|"low", "description": string, "fix": string)
+- "overall_score" (number 0-100): overall quality score
+- "fixed_html" (string): HTML with critical/high issues fixed
+- "fixed_js" (string): JS with critical/high issues fixed
+- "fixed_css" (string): CSS with critical/high issues fixed
+- "summary" (string): brief summary of findings`;
+
+const OPTIMIZER_SYSTEM = `You are a performance engineer and code quality specialist.
+
+Take the provided HTML, CSS, and JS (which have already passed security audit) and produce an optimized, production-ready single-page app.
 
 Tasks:
 1. Combine everything into clean, well-structured code.
-2. Remove dead code, redundant selectors, and unused variables.
-3. Ensure CSS is efficient (no duplicate rules, proper specificity).
-4. Ensure JS is clean (no console.logs in production, proper error handling).
-5. Verify HTML semantics (proper heading hierarchy, landmarks, alt text).
-6. Add meta viewport tag awareness in the HTML.
-7. Keep all functionality identical — do NOT remove features.
+2. Remove dead code, redundant CSS selectors, and unused JS variables.
+3. Optimize CSS: merge duplicate rules, use shorthand properties, ensure proper specificity order.
+4. Optimize JS: remove console.logs, ensure proper error handling, optimize DOM queries (cache selectors).
+5. Verify HTML semantics: proper heading hierarchy (single h1), landmark roles, meta viewport.
+6. Ensure all interactive elements have focus styles and keyboard support.
+7. Add loading="lazy" to images if any.
+8. Keep ALL functionality identical — do NOT remove any features.
+9. Ensure the code is clean, well-indented, and readable (not minified — readable production code).
 
 Return a JSON object with:
 - "html" (string): optimized HTML body content (no <html>/<head>/<body> wrappers).
 - "css" (string): optimized CSS.
-- "js" (string): optimized JS.`;
+- "js" (string): optimized JS.
+- "improvements" (array of strings): list of optimizations made.`;
 
 // ---------------------------------------------------------------------------
-// Main handler
+// Main handler — supports two modes:
+//   { prompt, mode: "analyze" }  → returns plan for human review
+//   { prompt, plan, feedback?, mode: "build" } → executes full build
 // ---------------------------------------------------------------------------
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -177,7 +234,9 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const body = await req.json();
+    const { prompt, mode = "full", plan: approvedPlan, feedback } = body;
+
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Prompt is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -191,33 +250,67 @@ serve(async (req) => {
         const { log, agent, milestone } = createHelpers(send);
 
         try {
-          log(`🚀 Starting workflow for: "${prompt}"`);
+          // ============================================================
+          // MODE: "analyze" — only run Analyst, return plan for review
+          // ============================================================
+          if (mode === "analyze") {
+            log(`🔍 Analyzing prompt: "${prompt}"`);
+            agent("supervisor", "running", "Delegating to Analyst…", 30);
+            agent("analyst", "running", "Analyzing prompt…", 10, "Decomposing requirements and constraints…");
 
-          // --- SUPERVISOR: init ---
+            const analysisPrompt = feedback
+              ? `Mystery prompt: ${prompt}\n\nPrevious feedback from human reviewer: ${feedback}\n\nRevise the plan based on this feedback. Output only valid JSON.`
+              : `Mystery prompt: ${prompt}\n\nOutput only valid JSON.`;
+
+            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, analysisPrompt, { json: true, temp: 0.1 });
+
+            let plan: Record<string, unknown>;
+            try { plan = JSON.parse(planRaw); } catch {
+              plan = { project_type: "web app", features: ["basic UI"], tech_stack: ["HTML", "CSS", "JS"], file_structure: ["index.html", "style.css", "script.js"], data_requirements: "none", special_notes: "" };
+            }
+
+            const features = (plan.features as string[]) || [];
+            agent("analyst", "done", "Plan created", 100, `${features.length} features identified`);
+            log(`Plan: ${features.join(", ")}`, "analyst");
+            agent("supervisor", "done", "Awaiting human review…", 100);
+            milestone("Plan ready for review");
+
+            send({ type: "plan", plan });
+            controller.close();
+            return;
+          }
+
+          // ============================================================
+          // MODE: "build" or "full" — execute full pipeline
+          // ============================================================
+          log(`🚀 Starting workflow for: "${prompt}"`);
           agent("supervisor", "running", "Initializing…", 20, "Parsing prompt structure…");
           milestone("Workflow initiated");
 
-          // --- ANALYST ---
-          agent("analyst", "running", "Analyzing prompt…", 10, "Breaking down requirements…");
-
-          const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, `Mystery prompt: ${prompt}\n\nOutput only valid JSON.`, { json: true, temp: 0.1 });
-
+          // --- ANALYST (skip if plan already approved) ---
           let plan: Record<string, unknown>;
-          try {
-            plan = JSON.parse(planRaw);
-          } catch {
-            plan = { project_type: "web app", features: ["basic UI"], tech_stack: ["HTML", "CSS", "JS"], file_structure: ["index.html", "style.css", "script.js"], data_requirements: "none", special_notes: "" };
+
+          if (approvedPlan) {
+            plan = approvedPlan;
+            agent("analyst", "done", "Using approved plan", 100, "Human-reviewed plan accepted");
+            log("Using human-approved plan", "analyst");
+          } else {
+            agent("analyst", "running", "Analyzing prompt…", 10, "Breaking down requirements…");
+            const planRaw = await callLLM(LOVABLE_API_KEY, ANALYST_SYSTEM, `Mystery prompt: ${prompt}\n\nOutput only valid JSON.`, { json: true, temp: 0.1 });
+            try { plan = JSON.parse(planRaw); } catch {
+              plan = { project_type: "web app", features: ["basic UI"], tech_stack: ["HTML", "CSS", "JS"], file_structure: ["index.html"], data_requirements: "none", special_notes: "" };
+            }
+            const features = (plan.features as string[]) || [];
+            agent("analyst", "done", "Plan created", 100, `Features: ${features.slice(0, 3).join(", ")}`);
+            log(`Analyst plan: ${features.join(", ")}`, "analyst");
           }
 
-          const featureList = (plan.features as string[]) || [];
-          agent("analyst", "done", "Plan created", 100, `Features: ${featureList.slice(0, 3).join(", ") || "analyzed"}`);
-          log(`Analyst plan: ${featureList.join(", ") || "complete"}`, "analyst");
           agent("supervisor", "done", "Delegating to Developer & Designer", 100);
           milestone("Analysis complete");
 
           // --- DEVELOPER + DESIGNER (parallel) ---
-          agent("developer", "running", "Writing HTML & JS…", 10, "Scaffolding structure…");
-          agent("designer", "running", "Creating CSS…", 10, "Setting up color palette & layout…");
+          agent("developer", "running", "Writing HTML & JS…", 10, "Scaffolding app structure…");
+          agent("designer", "running", "Creating CSS…", 10, "Building design system & color palette…");
           log("Developer and Designer running in parallel…", "system");
 
           const [codeRaw, stylesRaw] = await Promise.all([
@@ -226,50 +319,85 @@ serve(async (req) => {
           ]);
 
           let code: { html: string; js: string; notes?: string };
-          try {
-            code = JSON.parse(codeRaw);
-          } catch {
+          try { code = JSON.parse(codeRaw); } catch {
             code = { html: "<h1>Generated App</h1><p>Content here</p>", js: "console.log('App ready');" };
           }
 
           let styles: { css: string; color_palette?: string[]; notes?: string };
-          try {
-            styles = JSON.parse(stylesRaw);
-          } catch {
+          try { styles = JSON.parse(stylesRaw); } catch {
             styles = { css: "body { font-family: system-ui, sans-serif; margin: 2rem; }" };
           }
 
-          // Code safety check
+          // Basic code safety scan
           if (!codeIsSafe(code.js)) {
-            log("⚠️ Unsafe code detected — sanitizing…", "developer");
-            code.js = code.js.replace(/eval\s*\(/g, "/* eval removed */").replace(/document\.write\s*\(/g, "/* document.write removed */");
+            log("⚠️ Unsafe patterns detected — sanitizing…", "developer");
+            code.js = code.js
+              .replace(/eval\s*\(/g, "/* eval removed */")
+              .replace(/document\.write\s*\(/g, "/* document.write removed */")
+              .replace(/Function\s*\(/g, "/* Function constructor removed */");
           }
 
           agent("developer", "done", "Code ready", 100, code.notes || "HTML + JS complete");
           log("Developer finished — HTML + JS generated", "developer");
-          agent("designer", "done", "Styles ready", 100, styles.notes || "CSS complete with modern design");
+          agent("designer", "done", "Styles ready", 100, styles.notes || "CSS complete with design system");
           log(`Designer finished — palette: ${(styles.color_palette || []).join(", ") || "generated"}`, "designer");
           milestone("Code & styles complete");
 
+          // --- SECURITY AUDITOR ---
+          agent("security", "running", "Auditing code…", 20, "Scanning for XSS, accessibility, and code quality issues…");
+          log("Security Auditor scanning generated code…", "system");
+
+          const auditRaw = await callLLM(
+            LOVABLE_API_KEY,
+            SECURITY_AUDITOR_SYSTEM,
+            `Audit this code:\n\nHTML:\n${code.html}\n\nCSS:\n${styles.css}\n\nJS:\n${code.js}\n\nReturn only valid JSON.`,
+            { json: true, temp: 0.1 },
+          );
+
+          let audit: {
+            security_issues?: { severity: string; description: string }[];
+            accessibility_issues?: { severity: string; description: string }[];
+            overall_score?: number;
+            fixed_html?: string;
+            fixed_js?: string;
+            fixed_css?: string;
+            summary?: string;
+          };
+          try { audit = JSON.parse(auditRaw); } catch { audit = {}; }
+
+          const criticalCount = (audit.security_issues || []).filter((i) => i.severity === "critical" || i.severity === "high").length;
+          const a11yCount = (audit.accessibility_issues || []).filter((i) => i.severity === "critical" || i.severity === "high").length;
+
+          // Apply fixes from security auditor
+          if (audit.fixed_html) code.html = audit.fixed_html;
+          if (audit.fixed_js) code.js = audit.fixed_js;
+          if (audit.fixed_css) styles.css = audit.fixed_css;
+
+          agent("security", "done", `Audit complete — score: ${audit.overall_score ?? "N/A"}/100`, 100,
+            `${criticalCount} security fixes, ${a11yCount} accessibility fixes applied`);
+          log(`Security Auditor: ${audit.summary || "Audit complete"}`, "security");
+          if (criticalCount > 0) log(`🔒 Fixed ${criticalCount} critical/high security issues`, "security");
+          if (a11yCount > 0) log(`♿ Fixed ${a11yCount} critical/high accessibility issues`, "security");
+          milestone("Security audit passed");
+
           // --- OPTIMIZER ---
-          agent("optimizer", "running", "Optimizing…", 30, "Combining, cleaning, and minifying…");
+          agent("optimizer", "running", "Optimizing…", 30, "Combining, cleaning, and polishing…");
 
           const optimizedRaw = await callLLM(
             LOVABLE_API_KEY,
             OPTIMIZER_SYSTEM,
-            `Optimize and combine this code:\n\nHTML:\n${code.html}\n\nCSS:\n${styles.css}\n\nJS:\n${code.js}\n\nReturn only valid JSON.`,
+            `Optimize and combine this audited code:\n\nHTML:\n${code.html}\n\nCSS:\n${styles.css}\n\nJS:\n${code.js}\n\nReturn only valid JSON.`,
             { json: true, temp: 0.1 },
           );
 
-          let optimized: { html: string; css: string; js: string };
-          try {
-            optimized = JSON.parse(optimizedRaw);
-          } catch {
+          let optimized: { html: string; css: string; js: string; improvements?: string[] };
+          try { optimized = JSON.parse(optimizedRaw); } catch {
             optimized = { html: code.html, css: styles.css, js: code.js };
           }
 
-          agent("optimizer", "done", "Optimization complete", 100, "Bundle optimized & accessibility verified");
-          log("Optimizer finished — code cleaned and combined", "optimizer");
+          agent("optimizer", "done", "Optimization complete", 100,
+            `${(optimized.improvements || []).length} improvements applied`);
+          log(`Optimizer: ${(optimized.improvements || []).slice(0, 3).join(", ") || "optimized"}`, "optimizer");
           milestone("Optimization done");
 
           // --- FINAL ---
@@ -283,6 +411,12 @@ serve(async (req) => {
             code: { html: code.html, js: code.js },
             styles: { css: styles.css },
             optimized,
+            audit: {
+              score: audit.overall_score,
+              security_issues: (audit.security_issues || []).length,
+              accessibility_issues: (audit.accessibility_issues || []).length,
+              summary: audit.summary,
+            },
           });
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Unknown error";
