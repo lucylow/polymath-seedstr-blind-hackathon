@@ -393,7 +393,7 @@ serve(async (req) => {
             LOVABLE_API_KEY,
             OPTIMIZER_SYSTEM,
             `Optimize and combine this audited code:\n\nHTML:\n${code.html}\n\nCSS:\n${styles.css}\n\nJS:\n${code.js}\n\nReturn only valid JSON.`,
-            { json: true, temp: 0.1 },
+            { json: true, temp: 0.1, model: "openai/gpt-5-mini" },
           );
 
           let optimized: { html: string; css: string; js: string; improvements?: string[] };
