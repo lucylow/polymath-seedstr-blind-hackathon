@@ -1,9 +1,10 @@
 const steps = [
   { num: 1, title: "Mystery prompt", desc: "The secret prompt is revealed — our system receives it and starts the engine." },
   { num: 2, title: "Analysis & plan", desc: "The Analyst creates a comprehensive blueprint tailored to the prompt." },
-  { num: 3, title: "Parallel building", desc: "Developer and Designer work simultaneously to create code and styles." },
-  { num: 4, title: "Optimization", desc: "The Optimizer runs performance checks and improves speed & size." },
-  { num: 5, title: "Submission", desc: "A polished .zip file is produced, ready to upload to Seedstr." },
+  { num: 3, title: "Human review", desc: "You review, edit, or approve the plan before building begins." },
+  { num: 4, title: "Parallel building", desc: "Developer and Designer work simultaneously to create code and styles." },
+  { num: 5, title: "Security audit", desc: "The Security Auditor scans for XSS, accessibility issues, and code quality." },
+  { num: 6, title: "Optimize & submit", desc: "The Optimizer polishes the output, ready to download or submit." },
 ];
 
 const HowItWorksSection = () => {
